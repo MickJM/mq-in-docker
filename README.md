@@ -44,4 +44,9 @@ Server: Docker Engine - Community
 ## MQ Base image
 -----------------
 
-An MQ base container can be created, using the `build-base.cmd` script
+An MQ base container can be created, using the `build-base.cmd` script.
+
+## MQ Server
+------------
+
+An MQ server contain can be created, using the `build-qm.cmd` script

@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# Script to create the MQ keystore
+#
+set -e
+#
+echo "MQ Certificates"
+echo "---------------"
+#
+ret=0
+#
+# Remove the old files
+#
+cleankeystore() {
+    echo "Removing old key store files ..."
+    local filename=${IBM_MQ_QUEUEMANAGER}
+    rm -rf ${filename}.*
+}
+#
+# Check that the queue manager exists
+#
+queueManagerExists() {
+	local RET=`dspmq | grep ${IBM_MQ_QUEUEMANAGER} > /dev/null ; echo $?`
+    echo ${RET}
+}
+#
+# Create a new keystore
+# ... the certificate keystore password will a 16 byte random string, stashed
+#
+createKeystore() {
+    echo "Creating new keystore"
+
+    local filename=${IBM_MQ_QUEUEMANAGER}
+    cleankeystore ${filename}
+    ret=0
+    if [[ ! -e ${filename}.kdb ]]; then
+        echo "Default keystore does not exist ... creating new MQ certificate keystore"
+        password=`date +%s | sha256sum | base64 | head -c 16 ; echo`
+#        echo "Certs: Password = ${password}"
+        runmqakm -keydb -create -db ${filename}.kdb -pw ${password} -stash
+        chmod 755 ${filename}.*
+        RC=$?
+        if [ ${RC} != 0 ]; then
+            echo "Certs: Keystore failed get created ... return code ${ret}"        
+        else
+            echo "Certs: Keystore successfully created ... return code ${ret}"
+        fi
+    else
+        echo "Default keystore already exists"
+        ret=1
+    fi
+}
+#
+# Add a queue manager 'personal certificate'
+# ... this should be amended to add Root and Intermediate CA certificates and a signed MQ personal certificate
+# ... for now, I will just add a personal self-signed certificate
+#
+addPersonalCert() {
+    local keystore=${IBM_MQ_QUEUEMANAGER}
+    echo "Certs: Add queue manager cert"
+    local lowercaseQM=`echo "${IBM_MQ_QUEUEMANAGER}" | awk '{print tolower($0)}'`
+#    
+    echo "Certs: lower ${lowercaseQM}"
+    local certLabel="ibmwebspheremq${lowercaseQM}" 
+    runmqakm -cert -create -label ${certLabel} -stashed -expire 730 -size 2048 -dn "CN=${IBM_MQ_QUEUEMANAGER},OU=TEST,OU=QMGR,OU=ADMIN,O=DEVOPS,L=LONDON,ST=GB,email=user@domain.com" -db ${keystore}.kdb -ca false
+    echo "Certs: New certificate created"
+    runmqakm -cert -details -db ${keystore}.kdb -stashed -label ${certLabel}
+}
+#
+# Extract the self-signed certificate
+# ... The self-signed certifcate can be down-loaded from the queueu manager container using the api-mq-certs API
+#
+extractCert() {
+    local keystore=${IBM_MQ_QUEUEMANAGER}
+    local lowercaseQM=`echo "${IBM_MQ_QUEUEMANAGER}" | awk '{print tolower($0)}'`
+    local certLabel="ibmwebspheremq${lowercaseQM}" 
+    pwd
+    rm -rf ${certLabel}.arm
+#
+    runmqakm -cert -extract -db ${keystore}.kdb -stashed -label ${certLabel} -target ${certLabel}.arm -format ascii
+    RC=$?
+    if [ ${RC} != 0 ]; then
+        echo "Certs: Queue manager private cert was not exported"
+    else
+        echo "Certs: Queue manager cert has been exported"
+    fi
+}
+#
+#. /opt/mqm/bin/setmqenv -s
+dspmqver
+#
+echo "Certs: Creating certificate keystore ..."
+exist=`queueManagerExists`
+if [[ ${exist} != "0" ]]; then
+    echo "Certs: Queue manager ${IBM_MQ_QUEUEMANAGER} does not exist"
+else
+    echo "Certs: Queue manager ${IBM_MQ_QUEUEMANAGER} exists ... creating keystore "
+    cd /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/ssl
+    createKeystore
+    if [[ ${ret} != "1" ]]; then
+        echo "Certs: Add cert"
+        addPersonalCert key
+    fi
+    # Delete existing extract file for the queue managers certificate
+    # Extract the certifcate
+    #
+    extractCert
+fi
+#
