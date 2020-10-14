@@ -50,3 +50,15 @@ An MQ base container can be created, using the `build-base.cmd` script.
 ------------
 
 An MQ server contain can be created, using the `build-qm.cmd` script
+
+## MQ Processes
+----------------
+
+module | description
+-------| ------------
+amqzmuc0 | Critical process manager
+amqzxma0 | Execution Controller
+amqzfuma | OAM process
+amqzlaa0 | LQM agents
+amqzlsa0 | LQM agents
+amqzmuf0 | Utility manager
