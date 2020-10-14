@@ -62,3 +62,19 @@ amqzfuma | OAM process
 amqzlaa0 | LQM agents
 amqzlsa0 | LQM agents
 amqzmuf0 | Utility manager
+amqzmur0 | Restartable process manager
+amqzmgr0 | Process controller
+amqfqpub | Publish Subscribe process
+amqfcxba | Broker worker process
+amqrmppa | Process pooling process
+amqcrsta | Non-threaded responder job process
+amqcrs6b | LU62 receiver channel and client connection
+amqrrmfa | The repository process (for clusters)
+amqzdmaa | Deferred message processor
+amqpcsea | The command server
+runmqtrm | Invoke a trigger monitor for a server
+runmqdlq | Invoke dead-letter queue handler
+runmqchi | The channel initiator process
+runmqlsr | The channel listener process
+
+
