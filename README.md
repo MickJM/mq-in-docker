@@ -77,4 +77,7 @@ runmqdlq | Invoke dead-letter queue handler
 runmqchi | The channel initiator process
 runmqlsr | The channel listener process
 
+additional notes:
+https://www.ibm.com/support/knowledgecenter/SSFKSJ_7.5.0/com.ibm.mq.adm.doc/q020610_.htm
+https://www.mqtechconference.com/sessions_v2013/MQ_Internals_DeepDive.pdf
 
