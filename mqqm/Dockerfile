@@ -1,16 +1,23 @@
+#  
+# Create MQ Server image from the installation MQBase image
 #
 FROM mqbase:01
 #
-#RUN chmod 755 /usr/local/bin/mq*.sh
+LABEL version="1.0"
+LABEL description="MQ Server docker image, build from mqbase image"
+LABEL maintainer "Mick Moriarty"
 #
 ENV IBM_MQ_PRIMARYLOGFILES=3
 ENV IBM_MQ_SECONDARYLOGFILES=4
 ENV IBM_MQ_LISTENER=1414
 #
-#EXPOSE 1414
+# Make folders for the MQMonitoring APIs
 #
 RUN mkdir -p /usr/local/mqmonitor/bin \
    && mkdir -p /usr/local/mqmonitor/bin/config 
+#
+# Copy MQMonitoring API and config file, and api-mq-certs to show certificates on the queue manager
+#
 COPY ./sourceFiles/mq-metrics-1.0.0.17.jar /usr/local/mqmonitor/bin
 COPY ./mqscripts/qmgrs/QMAP01/config/application-local-qm.yaml /usr/local/mqmonitor/bin/config
 COPY ./sourceFiles/api-mq-certs-1.0.0.0.jar /usr/local/mqmonitor/bin
@@ -20,13 +27,8 @@ RUN yum install -y bc \
    && yum install -y java-11-openjdk.x86_64
 #
 WORKDIR /home/mqm
-#RUN ls -lrt /home/mqm/scripts/mqscripts 
-#RUN /home/mqm/scripts/mqscripts/mqCreateUsers
-#
 USER root
 #
-#COPY ./mqFiles/mq* /home/mqm/
 RUN cd /home/mqm
-#RUN ls -lrt
 # 
 ENTRYPOINT ["/home/mqm/scripts/mqscripts/mqDriver"]
