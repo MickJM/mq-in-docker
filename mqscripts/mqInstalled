@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+echo "Install: MQ Installed    "
+echo "------------------------"
+#
+set -e
+pwd
+RET=0
+#
+# Check to see if MQ is installed ...
+#
+for MQ_CONFIG_INSTALLATION_PATH in `cat /etc/opt/mqm/mqinst.ini 2>/dev/null |
+        sed -e 's/\([^\\\\]\)\([#;].*\)/\1/' -e 's/\\\\#/#/g' -e 's/\\\\;/;/g' \
+            -e 's/\\\\\\\\/\\\\/g' -e 's/^[       ]*//' -e 's/[   ]*$//' |
+        awk -F= '/^FilePath/ { printf("%s\n", $2) }'` "$MQ_CONFIG_DEFAULT_INSTALLATION_PATH"; 
+	do
+    if [ -x "$MQ_CONFIG_INSTALLATION_PATH/bin/dspmqver" ]; then
+      echo "PATH=$MQ_CONFIG_INSTALLATION_PATH"
+      "$MQ_CONFIG_INSTALLATION_PATH/bin/dspmqver" -bp 1 -f 2 2>/dev/null
+    fi
+done
+#
+if [ ! -z "$MQ_CONFIG_INSTALLATION_PATH]"; then
+  RET=1
+fi
+#
+echo "Checking complete, RC=${RET}"	  
+return ${RET}

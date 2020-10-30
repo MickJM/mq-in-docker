@@ -1,0 +1,264 @@
+#!/bin/bash
+#
+# Monitor IBM MQ Queue Managers in Docker containers
+#
+set +e
+#
+echo "Monitor: MQ Monitor     "
+echo "------------------------"
+echo "Monitor: MQMonitor is running as:  "
+id
+#
+# Function to stop MQ cleanly
+#
+stop()
+{
+	echo "Monitor: Stopping"
+	endmqm ${IBM_MQ_QUEUEMANAGER}
+}	
+
+#
+# Function to stop MQ immediatly
+#
+immediateStop()
+{
+	echo "Monitor: Stopping immediate"
+	endmqm -i ${IBM_MQ_QUEUEMANAGER}
+}	
+
+#
+# Remove Lock file
+#
+remoteLock() {
+	echo "Monitor: Removing Lock file"
+	rm /var/mqm/${IBM_MQ_QUEUEMANAGER}.lock
+}
+
+#
+# Return the state of the queue manager
+#
+state()
+{
+	dspmq -n -m ${IBM_MQ_QUEUEMANAGER} | awk -F '[()]' '{print $4}'	
+}
+
+#
+# Create or start the queue manager
+#
+createQueueManager()
+{
+	echo "Monitor: Creating queue manager"
+	. /opt/mqm/bin/setmqenv -s
+	echo "-------------------------------"
+#
+	dspmq | grep ${IBM_MQ_QUEUEMANAGER}
+	qmgr_exists=`dspmq | grep ${IBM_MQ_QUEUEMANAGER} > /dev/null ; echo $?`
+	echo "Monitor: Queue Manager ${IBM_MQ_QUEUEMANAGER} exists = ${qmgr_exists}"
+#
+# If we have NOT selected a 'COLD RESTART' of the queue manager, then create one
+#
+	if [ ${COLD_QMGR} == "N" ]; then
+		if [ ${qmgr_exists} -ne 0 ]; then
+			echo "Monitor: Info: Creating queue manager ${IBM_MQ_QUEUEMANAGER}"
+			echo "Monitor: Current disk space / mount points"
+			df -h
+#
+# If we have NOT selected 'MULTI INSTANCE', then create a new queue manager, otherwise, 
+#     multi instance queue managers have 2 instances, active(0) and passive(1)
+#     When active(0) is selected, create the queue manager
+#     When passive(1)  
+#
+			if [ ${MULTI} == "N" ]; then
+				echo "Monitor: Creating queue manager ..."
+				crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
+			else
+				if [ ${INST} == "0" ]; then
+#
+# Check file system
+#
+                    amqmfsck -f /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
+					RC=$?
+					echo "RC=${RC}"
+					if [ ${RC} != 0 ]; then
+						echo "Monitor: File check failed for /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER} : RC=${RC} "
+						exit
+					else
+						echo "Monitor: File check successful"
+					fi
+#
+					echo "Monitor: Creating multi-instance queue manager ..."
+					crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
+					dspmqinf -o command ${IBM_MQ_QUEUEMANAGER}
+				else
+					echo "Monitor: Adding multi instance"
+					addmqinf -s QueueManager -v Name=${IBM_MQ_QUEUEMANAGER} -v Directory=${IBM_MQ_QUEUEMANAGER} -v Prefix=/var/mqm -v DataPath=/var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
+				fi
+			fi
+			RC=$?
+			echo "RC=${RC}"
+			if [ ${RC} != 0 ]; then
+				echo "Monitor: Unable to create queue manager ${IBM_MQ_QUEUEMANAGER} "
+				exit
+			else
+				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} create successfully, RET=${RC}"
+			fi
+#
+##			echo "Monitor: Enabling MQWebBrowser"
+##			. ./mqWebAdmin
+#
+			if [ ${MULTI} == "N" ]; then
+				echo "Monitor: Starting queue manager, normally"
+				strmqm ${IBM_MQ_QUEUEMANAGER}
+			else
+				echo "Monitor: Starting queue manager, multi-instance"			
+				strmqm -x ${IBM_MQ_QUEUEMANAGER}
+			fi
+			RC=$?
+			if [ ${RC} != 0 ]; then
+				echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
+				exit
+			else
+				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started cusscessfully, RET=${RC}"
+			fi			
+			sleep 5
+#
+# Save a copy of the mqs.ini file, so we can reuse it in a cold restart
+#
+			cp /var/mqm/mqs.ini /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.in
+			configQueueManager
+#
+		fi
+	else
+#
+# https://webspheremqadministrator.blogspot.com/2014/06/how-to-do-cold-restart-of-queue-manager.html
+#
+		echo "Monitor: Cold ReStart"
+		echo "---------------------"
+#
+		echo "Monitor: Removing old log files for ... ${IBM_MQ_QUEUEMANAGER} from /var/mqm/logs"
+		cd /var/mqm/log/${IBM_MQ_QUEUEMANAGER}/
+		rm -r *
+		ls -lrt 
+#
+		echo "Monitor: Creating dummy queue manager ... COLD${IBM_MQ_QUEUEMANAGER}"
+		crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} COLD${IBM_MQ_QUEUEMANAGER}
+		RC=$?
+		if [ ${RC} != 5 ]; then
+			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} created successfully"
+		else
+			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} failed to be created, error code $?"
+		fi
+#
+		echo ""
+		echo "Monitor: Copying new config file from COLD${IBM_MQ_QUEUEMANAGER} to ${IBM_MQ_QUEUEMANAGER}"
+#		cd /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/
+		mv /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/* /var/mqm/log/${IBM_MQ_QUEUEMANAGER} 
+		ls -lrt /var/mqm/log/${IBM_MQ_QUEUEMANAGER}
+		echo "Monitor: Copying mqs.ini"
+		cp /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.ini /var/mqm/mqs.ini
+		echo ""
+#
+#		cd /home/mqm/scripts/mqscripts
+#
+#		dltmqm COLD${IBM_MQ_QUEUEMANAGER}
+	fi
+#
+	set +e
+	echo "Monitor: Starting queue manager ${IBM_MQ_QUEUEMANAGER}"
+	strmqm ${IBM_MQ_QUEUEMANAGER}
+	echo "Monitor: Queue manager ..."
+	RC=$?
+	if [ ${RC} != 5 ]; then
+		echo "Monitor: Queue manager is starting ${RC}"
+	else
+		echo "Monitor: Queue manager returned error code ${RC}"
+	fi
+	set -e
+}
+
+#
+# Apply .MQSC configuration files to the queue manager
+#
+configQueueManager()
+{
+	echo "Monitor: Applying configuration to queue manager using .mqsc files"
+	. ./mqSetupQueueManager
+#
+    echo "Monitor: Creating / extracting keystore and certificate"
+	. ./mqCertificates 
+}
+
+#
+# Ensure that the queue manager is running
+#
+monitor()
+{
+	echo "Monitor: Monitoring"
+	dspmq -m ${IBM_MQ_QUEUEMANAGER}
+#	state
+	STATE=`state`
+	echo "State = ${STATE}"
+	until [ "${STATE}" == "RUNNING" ] || [ "${STATE}" == "RUNNING ELSEWHERE" ]; do
+		if [ "${STATE}" == "RUNNING ELSEWHERE" ]; then
+			WASRUNNINGELSEWHERE=TRUE
+		fi
+		sleep 1
+		STATE=`state`
+	done
+#
+	dspmq
+	echo "Monitor: IBM MQ Queue Manager ${IBM_MQ_QUEUEMANAGER} is fully running"
+    touch /var/mqm/${IBM_MQ_QUEUEMANAGER}.lock
+#
+	STATE=`state`
+	while [ "${STATE}" == "RUNNING" ] || [ "${STATE}" == "RUNNING ELSEWHERE" ]; do
+#			    echo "waiting ...."
+		if [ "${STATE}" == "RUNNING ELSEWHERE" ]; then
+			WASRUNNINGELSEWHERE=TRUE
+		fi
+		sleep 5
+		STATE=`state`
+	done
+#
+	echo "Monitor: Ending ...."
+	ATTEMPTS=0
+#
+	while true; do
+		STATE=`state`
+		echo "Monitor: Attempting to stop MQ cleanly ..."
+		ATTEMPTS=$((ATTEMPTS+1))
+		echo "Monitor: Attempts = ${ATTEMPTS}"
+		if [ ${ATTEMPTS} -gt 6 ]; then
+		   echo "Monitor: WARNING: Attempts breached, stopping MQ with 'immediate' attribute ..."
+		   immediateStop
+		   STATE=`state`
+		fi
+		case "${STATE}" in
+			ENDED*)
+				echo "Monitor: Queue Manager is ending ..."			
+				break;;
+			*) 
+			    echo "Monitor: Queue Manager status ${STATE}..."
+				;;
+		esac
+		sleep 5
+	done
+
+}
+#
+trap stop SIGTERM SIGINT
+if [ -z ${COLD_QMGR} ]; then
+    echo "Monitor: MQ Creating queue manager"
+	COLD_QMGR="N"
+else
+    echo "Monitor: MQ Cold ReStart property is set as ${COLD_QMGR}"
+fi
+createQueueManager
+monitor
+echo "RUNNINGELSEWHERE=${WASRUNNINGELSEWHERE}"
+if [ "${WASRUNNINGELSEWHERE}" == "TRUE" ]; then
+    echo "Monitor: Queue manager was running elsewhere, starting queue manager"
+	WASRUNNINGELSEWHERE=FALSE
+	strmqm -x ${IBM_MQ_QUEUEMANAGER}
+	monitor
+fi
