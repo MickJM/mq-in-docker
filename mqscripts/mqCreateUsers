@@ -1,23 +1,28 @@
 #!/bin/bash
 #
-set -e
+set +e
 #
-echo "CreateUsers: MQ Users"
-echo "---------------------"
+if [ ${EUID} -ne 0 ]; then
+    echo "CreateUsers: Unable to create users, must run as root"
+    exit 99
+fi
+#
+echo "CreateUsers: MQ Users "
+echo "----------------------"
 #
 createUser() {
-    local username=$1
-    local password=$2
-    if [ `sed -n "/^${username}/p" /etc/passwd` ]; then
-        echo "User [${username}] already exists"
+    local u1=$1
+    local p1=$2
+    if [ `sed -n "/^${u1}/p" /etc/passwd` ]; then
+        echo "User [${u1}] already exists"
     else
-        echo "User [${username}] doesn't exist ... creating"
-        if [ -e ${password} ]; then
-            password=`date +%s | sha256sum | base64 | head -c 16 ; echo`
+        echo "User [${u1}] doesn't exist ... creating"
+        if [ -e ${p1} ]; then
+            p1=`date +%s | sha256sum | base64 | head -c 16 ; echo`
         fi
-        echo "User [${username}], [${password}]"       
-        useradd -G mqm ${username}
-        echo ${username}:${password} | chpasswd
+        echo "User: ${u1}, ${p1} added"
+        useradd -G mqm ${u1}
+        echo ${u1}:${p1} | chpasswd
     fi    
 }
 #
@@ -29,9 +34,25 @@ echo "CreateUsers: Creating users ..."
 #createUser mquser01 Passw0rd
 #createUser mquser02 Passw0rd
 #
-inputfile=~/scripts/mqscripts/users
+# Create users
 #
-while IFS= read -r line
+inputdir=~/scripts/mqscripts
+inputfile=${inputdir}/users
+if [ -f inputfile ]; then
+    echo "CreateUsers: user file is missing, no users will be created"
+    exit 99
+fi
+echo "CreateUsers: input file used - ${inputfile}"
+#
+# Read the users line-by-line, delimited by comma
+#
+while IFS=, read -r userid password
 do
-    echo "Line: ${line}"
-done < inputfile
+    if [ ! -f ${password} ]; then
+        #echo "userid  : ${userid}"
+        #echo "password: ${password}"
+        createUser ${userid} ${password} 
+    fi
+done < ${inputfile}
+#
+set -e
