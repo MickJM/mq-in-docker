@@ -1,0 +1,141 @@
+#!/bin/bash
+#
+set -e
+#
+# C:\ProgramData\IBM\MQ\web\installations\Installation1\servers\mqweb
+#
+. /opt/mqm/bin/setmqenv -s
+#
+echo "MQ Web Admin   "
+echo "---------------"
+#
+createWebUser() {
+    if [ ! -d /tmp/webTemp/ ]; then
+        mkdir /tmp/webTemp
+        if [ -f /tmp/webTemp/mqwebuser.xml ]; then
+            rm /tmp/webTemp/mqwebuser.xml
+        fi
+    fi
+    local -r OUT=/tmp/webTemp/mqwebuser.xml
+    #
+    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > $OUT
+    echo "<!--" >> $OUT
+    echo "  mqWebAdmin" >> $OUT
+    echo "  Automatically created " >> $OUT
+    echo "-->" >> $OUT
+    echo "<server>" >> $OUT
+
+    echo "   <featureManager>" >> $OUT
+    echo "     <feature>appSecurity-2.0</feature>" >> $OUT
+    echo "     <feature>basicAuthenticationMQ-1.0</feature>" >> $OUT
+    echo "     <feature>apiDiscovery-1.0</feature>" >> $OUT
+    echo "   </featureManager>" >> $OUT
+
+    echo "   <!--" >> $OUT
+    echo "     Roles for MQ console" >> $OUT
+    echo "   -->" >> $OUT
+
+    echo "   <enterpriseApplication id=\"com.ibm.mq.console\">" >> $OUT
+    echo "     <application-bnd>" >> $OUT
+    echo "       <security-role name=\"MQWebAdmin\">" >> $OUT
+    echo "         <group name=\"MQWebAdminGroup\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MQWebAdminRO\">" >> $OUT
+    echo "         <user name=\"mqreader\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MQWebUser\">" >> $OUT
+    echo "         <special-subject type=\"ALL_AUTHENTICATED_USERS\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MFTWebAdmin\">" >> $OUT
+    echo "         <user name=\"mftadmin\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MFTWebAdminRO\">" >> $OUT
+    echo "         <user name=\"mftreader\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "     </application-bnd>" >> $OUT
+    echo "   </enterpriseApplication>" >> $OUT
+
+    echo "   <enterpriseApplication id=\"com.ibm.mq.rest\">"  >> $OUT
+    echo "     <application-bnd>" >> $OUT
+    echo "       <security-role name=\"MQWebAdmin\">" >> $OUT
+    echo "         <group name=\"MQWebAdminGroup\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MQWebAdminRO\">" >> $OUT
+    echo "         <user name=\"mqreader\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MQWebUser\">" >> $OUT
+    echo "         <special-subject type=\"ALL_AUTHENTICATED_USERS\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MFTWebAdmin\">" >> $OUT
+    echo "         <user name=\"mftadmin\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "       <security-role name=\"MFTWebAdminRO\">" >> $OUT
+    echo "         <user name=\"mftreader\" realm=\"defaultRealm\"/>" >> $OUT
+    echo "       </security-role>" >> $OUT
+    echo "     </application-bnd>" >> $OUT
+    echo "   </enterpriseApplication>" >> $OUT
+
+    echo "   <basicRegistry id=\"basic\" realm=\"defaultRealm\">" >> $OUT
+    echo "     <!--" >> $OUT
+    echo "     This sample defines two users with unencoded passwords" >> $OUT
+    echo "     and a group, these are used by the role mappings above." >> $OUT
+    echo "     -->" >> $OUT
+    echo "     <user name=\"mqdocker\" password=\"passw0rd\"/>" >> $OUT
+    echo "     <user name=\"mqadmin\" password=\"mqadmin\"/>" >> $OUT
+    echo "     <user name=\"mqreader\" password=\"mqreader\"/>" >> $OUT
+    echo "     <user name=\"mftadmin\" password=\"mftadmin\"/>" >> $OUT
+    echo "     <user name=\"mftreader\" password=\"mftreader\"/>" >> $OUT
+    echo "     <group name=\"MQWebAdminGroup\">" >> $OUT
+    echo "       <member name=\"mqadmin\"/>" >> $OUT
+    echo "       <member name=\"mqdocker\"/>" >> $OUT
+    echo "     </group>" >> $OUT
+    echo "   </basicRegistry>" >> $OUT
+
+    mkdir -p /var/mqm/web/installations/Installation1/servers/mqweb/resources/security
+
+    rm -rf /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks
+    rm -rf /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks
+    #
+   # keytool -genkey -noprompt -alias mickm -keyalg RSA -sigalg SHA256withRSA -dname "CN=MickM,O=Maersk,L=LONDON,ST=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/key.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048
+   # keytool -genkey -noprompt -alias localhost -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,L=LONDON,ST=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias mqweb -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqweb,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias default -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+
+    keytool -genkey -noprompt -alias mqdocker -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqdocker,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+    keytool -export -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storepass password -alias mqdocker -file /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/mqdocker.arm -rfc
+
+    keytool -genkey -noprompt -alias server -keyalg RSA -sigalg SHA256withRSA -dname "CN=server,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
+    keytool -import -noprompt -alias mqdocker -file /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/mqdocker.arm -storepass Passw0rd -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -trustcacerts 
+   # 
+    keytool -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storepass password -list
+    keytool -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -storepass Passw0rd -list
+
+   # keytool -genkey -noprompt -alias localhost -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,L=LONDON,ST=GB" -keystore trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
+
+    echo "   <keyStore id=\"defaultKeyStore\" location=\"/var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks\" type=\"JKS\" password=\"password\"/>" >> $OUT
+    echo "   <keyStore id=\"defaultTrustStore\" location=\"/var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks\" type=\"JKS\" password=\"Passw0rd\"/>" >> $OUT
+    echo "   <ssl id=\"thisSSLConfig\" clientAuthenticationSupported=\"true\" keyStoreRef=\"defaultKeyStore\"" >> $OUT
+    echo "       serverKeyAlias=\"default\" trustStoreRef=\"defaultTrustStore\" sslProtocol=\"TLSv1.2\"/>" >> $OUT
+    echo "   <sslDefault sslRef=\"thisSSLConfig\"/>" >> $OUT
+
+    echo "</server>" >> $OUT    
+
+}
+#
+echo "Creating MQ webuser config file ..."
+createWebUser
+#
+# Allow ALL hosts
+#setmqweb properties -k httpHost -v "*"
+#
+cp /tmp/webTemp/mqwebuser.xml /var/mqm/web/installations/Installation1/servers/mqweb/. 
+#
+strmqweb
+endmqweb
+#
+setmqweb properties -k httpHost -v "*"
+setmqweb properties -k httpsPort -v 9443
+strmqweb
+#
+dspmqweb
+#

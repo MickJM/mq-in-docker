@@ -38,5 +38,5 @@ RUN yum -y update \
   && rpm -ivh MQSeriesAMS-*.rpm \
   && rpm -ivh MQSeriesSamples-*.rpm \
 # Install IIB/ACE here if needed
-   && ls -lrt
+  && ls -lrt
 #

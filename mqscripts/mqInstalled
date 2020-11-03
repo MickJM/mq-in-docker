@@ -24,5 +24,5 @@ if [ ! -z "$MQ_CONFIG_INSTALLATION_PATH]"; then
   RET=1
 fi
 #
-echo "Checking complete, RC=${RET}"	  
+echo "Install: Checking complete, RC=${RET}"	  
 return ${RET}

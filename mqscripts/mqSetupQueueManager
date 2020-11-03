@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+set +e
+#
+echo "Setup QM       "
+echo "---------------"
+
+DIR=`pwd`
+CONFIG=config
+#
+# Create the initial setup dynamically ...
+#
+initialmqsc()
+{
+   rm -rf ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+   mkdir -p ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}
+   echo "define ql(DEAD.LETTER.QUEUE) LIKE (SYSTEM.DEAD.LETTER.QUEUE)" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+   echo "Listener name : TCP.${IBM_MQ_LISTENER}"
+   echo "define listener(TCP.${IBM_MQ_LISTENER}) trptype(TCP) control(QMGR) port(${IBM_MQ_LISTENER}) descr('Default Listener') replace" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+   echo "start listener(TCP.${IBM_MQ_LISTENER})" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+}
+
+#
+initialmqsc
+#
+#LOGFILE=/tmp/mqSetupQueueManager_${FILENAME}_$(date +%Y%m%d_%H%M%S_%N)
+#echo "Log file filename: ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/all.mqsc"
+#touch ${LOGFILE}
+#runmqsc ${IBM_MQ_QUEUEMANAGER} < ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/all.mqsc >> ${LOGFILE}
+#
+# docker volume create --name mynfs --opt type=nfs --opt device=:C:\Users\mickm\OneDrive\Documents\MQShare --opt o=addr=192.168.1.67
+#
+# docker run -d -t --name=storage -v "C:\Users\mickm\OneDrive\Documents\MQShare:/data" alpine
+# docker volume create --name mynfs --opt type=nfs4 --opt device=:/data --opt o=addr=172.17.0.2
+#
+for MQSC_FILE in $(ls -v ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/*.mqsc); do
+   FILENAME=${MQSC_FILE} | awk -F '/${CONFIG}/' '{print $2}'
+   echo "filename: ${FILENAME}"
+   echo "mqsc    : ${MQSC_FILE}"
+   LOGFILE=/tmp/mqSetupQueueManager_${FILENAME}_$(date +%Y%m%d_%H%M%S_%N)
+   touch ${LOGFILE}
+   runmqsc ${IBM_MQ_QUEUEMANAGER} < ${MQSC_FILE} >> ${LOGFILE}
+done

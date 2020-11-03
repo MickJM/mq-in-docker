@@ -49,7 +49,7 @@ createQueueManager()
 {
 	echo "Monitor: Creating queue manager"
 	. /opt/mqm/bin/setmqenv -s
-	echo "-------------------------------"
+	echo "----------------------------------------"
 #
 	dspmq | grep ${IBM_MQ_QUEUEMANAGER}
 	qmgr_exists=`dspmq | grep ${IBM_MQ_QUEUEMANAGER} > /dev/null ; echo $?`
@@ -72,11 +72,16 @@ createQueueManager()
 				echo "Monitor: Creating queue manager ..."
 				crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
 			else
+#
+# If multi instance, we have 2 instances - active(0) and passive(1)
+#     When instance is active, check the file system, create the queue manager and show the MQ Info for the passive queue manager
+#
 				if [ ${INST} == "0" ]; then
 #
 # Check file system
 #
-                    amqmfsck -f /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
+                    . ./mqCheckFileSystem    
+#                   amqmfsck -f /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
 					RC=$?
 					echo "RC=${RC}"
 					if [ ${RC} != 0 ]; then
@@ -86,10 +91,15 @@ createQueueManager()
 						echo "Monitor: File check successful"
 					fi
 #
+# Create multi instance
+#
 					echo "Monitor: Creating multi-instance queue manager ..."
 					crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
 					dspmqinf -o command ${IBM_MQ_QUEUEMANAGER}
 				else
+#
+# Create the passive queue manager
+#
 					echo "Monitor: Adding multi instance"
 					addmqinf -s QueueManager -v Name=${IBM_MQ_QUEUEMANAGER} -v Directory=${IBM_MQ_QUEUEMANAGER} -v Prefix=/var/mqm -v DataPath=/var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
 				fi
@@ -100,20 +110,17 @@ createQueueManager()
 				echo "Monitor: Unable to create queue manager ${IBM_MQ_QUEUEMANAGER} "
 				exit
 			else
-				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} create successfully, RET=${RC}"
+				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} create cusscessfully, RET=${RC}"
 			fi
 #
-##			echo "Monitor: Enabling MQWebBrowser"
-##			. ./mqWebAdmin
-#
 			if [ ${MULTI} == "N" ]; then
-				echo "Monitor: Starting queue manager, normally"
+				echo "Starting queue manager"
 				strmqm ${IBM_MQ_QUEUEMANAGER}
 			else
-				echo "Monitor: Starting queue manager, multi-instance"			
 				strmqm -x ${IBM_MQ_QUEUEMANAGER}
 			fi
 			RC=$?
+			echo "START RC=${RC}"
 			if [ ${RC} != 0 ]; then
 				echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
 				exit
@@ -132,35 +139,44 @@ createQueueManager()
 #
 # https://webspheremqadministrator.blogspot.com/2014/06/how-to-do-cold-restart-of-queue-manager.html
 #
-		echo "Monitor: Cold ReStart"
-		echo "---------------------"
+# Cold restart
 #
-		echo "Monitor: Removing old log files for ... ${IBM_MQ_QUEUEMANAGER} from /var/mqm/logs"
+		echo "Cold ReStart"
+		echo "Removing old log files for ... ${IBM_MQ_QUEUEMANAGER} in /var/mqm/logs"
 		cd /var/mqm/log/${IBM_MQ_QUEUEMANAGER}/
 		rm -r *
 		ls -lrt 
 #
-		echo "Monitor: Creating dummy queue manager ... COLD${IBM_MQ_QUEUEMANAGER}"
+# First create a new 'dummy' queue manager, based on the details in the environment variables
+#    We dont start the queue manager yet, once created, copy the new log files to the queue manager folder
+#    Copy the same mqs.ini from the original creation of the queue manager
+#    Delete the 'dummy' queue manager
+#    Start the queue manager
+#        Messages stored persistently will be recovered
+#        Messages stored on log files will be lost
+#    if every thing works, the queue manager should start sucessfully
+#
+		echo "Creating dummy queue manager ... COLD${IBM_MQ_QUEUEMANAGER}"
 		crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} COLD${IBM_MQ_QUEUEMANAGER}
 		RC=$?
 		if [ ${RC} != 5 ]; then
 			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} created successfully"
 		else
 			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} failed to be created, error code $?"
+			exit
 		fi
 #
 		echo ""
-		echo "Monitor: Copying new config file from COLD${IBM_MQ_QUEUEMANAGER} to ${IBM_MQ_QUEUEMANAGER}"
-#		cd /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/
+		echo "Copying new config file from COLD${IBM_MQ_QUEUEMANAGER} to ${IBM_MQ_QUEUEMANAGER}"
 		mv /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/* /var/mqm/log/${IBM_MQ_QUEUEMANAGER} 
 		ls -lrt /var/mqm/log/${IBM_MQ_QUEUEMANAGER}
-		echo "Monitor: Copying mqs.ini"
+		echo "Copying mqs.ini"
 		cp /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.ini /var/mqm/mqs.ini
 		echo ""
 #
-#		cd /home/mqm/scripts/mqscripts
+# Remove the 'dummy' queue manager
 #
-#		dltmqm COLD${IBM_MQ_QUEUEMANAGER}
+		dltmqm COLD${IBM_MQ_QUEUEMANAGER}
 	fi
 #
 	set +e
@@ -173,6 +189,9 @@ createQueueManager()
 	else
 		echo "Monitor: Queue manager returned error code ${RC}"
 	fi
+#
+	postConfigurations
+#
 	set -e
 }
 
@@ -185,7 +204,19 @@ configQueueManager()
 	. ./mqSetupQueueManager
 #
     echo "Monitor: Creating / extracting keystore and certificate"
-	. ./mqCertificates 
+	. ./mqCertificates
+#
+}
+
+#
+# Post configurations
+# Run after the queue manager has been started
+#
+postConfigurations() 
+{
+	echo "Monitor: Enabling MQWebBrowser"
+	. ./mqWebAdmin
+#
 }
 
 #
@@ -200,7 +231,7 @@ monitor()
 	echo "State = ${STATE}"
 	until [ "${STATE}" == "RUNNING" ] || [ "${STATE}" == "RUNNING ELSEWHERE" ]; do
 		if [ "${STATE}" == "RUNNING ELSEWHERE" ]; then
-			WASRUNNINGELSEWHERE=TRUE
+			wasrunningelsewhere=TRUE
 		fi
 		sleep 1
 		STATE=`state`
@@ -214,13 +245,13 @@ monitor()
 	while [ "${STATE}" == "RUNNING" ] || [ "${STATE}" == "RUNNING ELSEWHERE" ]; do
 #			    echo "waiting ...."
 		if [ "${STATE}" == "RUNNING ELSEWHERE" ]; then
-			WASRUNNINGELSEWHERE=TRUE
+			wasrunningelsewhere=true
 		fi
 		sleep 5
 		STATE=`state`
 	done
 #
-	echo "Monitor: Ending ...."
+	echo "Ending ...."
 	ATTEMPTS=0
 #
 	while true; do
@@ -255,10 +286,9 @@ else
 fi
 createQueueManager
 monitor
-echo "RUNNINGELSEWHERE=${WASRUNNINGELSEWHERE}"
-if [ "${WASRUNNINGELSEWHERE}" == "TRUE" ]; then
+if [ "${wasrunningelsewhere}" == "true" ]; then
     echo "Monitor: Queue manager was running elsewhere, starting queue manager"
-	WASRUNNINGELSEWHERE=FALSE
+	wasrunningelsewhere=false
 	strmqm -x ${IBM_MQ_QUEUEMANAGER}
 	monitor
 fi

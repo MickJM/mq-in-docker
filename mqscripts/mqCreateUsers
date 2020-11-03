@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+set -e
+#
+echo "CreateUsers: MQ Users"
+echo "---------------------"
+#
+createUser() {
+    local username=$1
+    local password=$2
+    if [ `sed -n "/^${username}/p" /etc/passwd` ]; then
+        echo "User [${username}] already exists"
+    else
+        echo "User [${username}] doesn't exist ... creating"
+        if [ -e ${password} ]; then
+            password=`date +%s | sha256sum | base64 | head -c 16 ; echo`
+        fi
+        echo "User [${username}], [${password}]"       
+        useradd -G mqm ${username}
+        echo ${username}:${password} | chpasswd
+    fi    
+}
+#
+. /opt/mqm/bin/setmqenv -s
+dspmqver
+#
+echo "CreateUsers: Creating users ..."
+#createUser mqdocker
+#createUser mquser01 Passw0rd
+#createUser mquser02 Passw0rd
+#
+inputfile=~/scripts/mqscripts/users
+#
+while IFS= read -r line
+do
+    echo "Line: ${line}"
+done < inputfile
