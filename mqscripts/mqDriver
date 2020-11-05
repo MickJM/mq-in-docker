@@ -19,10 +19,6 @@ if [ ${RC} != 0 ]; then
   exit 1
 fi
 #
-# Check file system
-# 
-#. ./mqCheckFileSystem
-#
 # Monitor the running queue manager
 #
 . ./mqMonitor
