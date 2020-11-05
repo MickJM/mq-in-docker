@@ -12,24 +12,29 @@ LOGFILE=/tmp/mqSetupQueueManager_$(date +%Y%m%d_%H%M%S_%N)
 #
 createmqscdefaults()
 {
-   rm -rf ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
-   mkdir -p ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}
-   echo "define ql(DEAD.LETTER.QUEUE) LIKE (SYSTEM.DEAD.LETTER.QUEUE)" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+   rm -rf ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config/initialsetup.mqsc
+   mkdir -p ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config
+   echo "define ql(DEAD.LETTER.QUEUE) LIKE (SYSTEM.DEAD.LETTER.QUEUE)" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config/initialsetup.mqsc
    echo "Listener name : TCP.${IBM_MQ_LISTENER}"
-   echo "define listener(TCP.${IBM_MQ_LISTENER}) trptype(TCP) control(QMGR) port(${IBM_MQ_LISTENER}) descr('Default Listener') replace" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
-   echo "start listener(TCP.${IBM_MQ_LISTENER})" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/${CONFIG}/initialsetup.mqsc
+   echo "define listener(TCP.${IBM_MQ_LISTENER}) trptype(TCP) control(QMGR) port(${IBM_MQ_LISTENER}) descr('Default Listener') replace" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config/initialsetup.mqsc
+   echo "start listener(TCP.${IBM_MQ_LISTENER})" >> ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config/initialsetup.mqsc
 }
 #
 # Apply configurations
 #
 applyconfig()
 {
+   touch ${LOGFILE}
+#
    for MQSC_FILE in $(ls -v ${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config/*.mqsc); do
       echo "mqsc    : ${MQSC_FILE}"
-      touch ${LOGFILE}
-      runmqsc ${IBM_MQ_QUEUEMANAGER} < ${MQSC_FILE} >> ${LOGFILE}
+#      runmqsc ${IBM_MQ_QUEUEMANAGER} < ${MQSC_FILE} >> ${LOGFILE}
    done
 }
+#
+if [ -f IBM_MQ_CONFIG ]; then
+    echo "SetupQueueManager: IBM_MQ_CONFIG is not set"
+fi
 #
 createmqscdefaults
 #

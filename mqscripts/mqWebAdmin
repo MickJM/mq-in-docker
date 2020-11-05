@@ -96,21 +96,19 @@ createWebUser() {
     rm -rf /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks
     rm -rf /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks
     #
-   # keytool -genkey -noprompt -alias mickm -keyalg RSA -sigalg SHA256withRSA -dname "CN=MickM,O=Maersk,L=LONDON,ST=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/key.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048
-   # keytool -genkey -noprompt -alias localhost -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,L=LONDON,ST=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
-    keytool -genkey -noprompt -alias mqweb -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqweb,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
-    keytool -genkey -noprompt -alias default -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias mqweb -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqweb,O=Company,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias default -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Company,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
 
-    keytool -genkey -noprompt -alias mqdocker -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqdocker,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias mqdocker -keyalg RSA -sigalg SHA256withRSA -dname "CN=mqdocker,O=Company,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storetype jks -storepass password -keypass password -validity 730 -keysize 2048 -trustcacerts
     keytool -export -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storepass password -alias mqdocker -file /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/mqdocker.arm -rfc
 
-    keytool -genkey -noprompt -alias server -keyalg RSA -sigalg SHA256withRSA -dname "CN=server,O=Maersk,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
+    keytool -genkey -noprompt -alias server -keyalg RSA -sigalg SHA256withRSA -dname "CN=server,O=Company,C=GB" -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
     keytool -import -noprompt -alias mqdocker -file /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/mqdocker.arm -storepass Passw0rd -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -trustcacerts 
    # 
     keytool -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks -storepass password -list
     keytool -keystore /var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks -storepass Passw0rd -list
 
-   # keytool -genkey -noprompt -alias localhost -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Maersk,L=LONDON,ST=GB" -keystore trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
+   # keytool -genkey -noprompt -alias localhost -keyalg RSA -sigalg SHA256withRSA -dname "CN=localhost,O=Company,L=LONDON,ST=GB" -keystore trust.jks -storetype jks -storepass Passw0rd -keypass Passw0rd -validity 730 -keysize 2048 -trustcacerts
 
     echo "   <keyStore id=\"defaultKeyStore\" location=\"/var/mqm/web/installations/Installation1/servers/mqweb/resources/security/key.jks\" type=\"JKS\" password=\"password\"/>" >> $OUT
     echo "   <keyStore id=\"defaultTrustStore\" location=\"/var/mqm/web/installations/Installation1/servers/mqweb/resources/security/trust.jks\" type=\"JKS\" password=\"Passw0rd\"/>" >> $OUT
