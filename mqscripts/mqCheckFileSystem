@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+set -e
+#
+echo "CheckFileSystem: MQ Checking file system"
+echo "----------------------------------------"
+#
+. /opt/mqm/bin/setmqenv -s
+dspmqver
+#
+echo "FileSystemCheck: Checking MQ FileSystem ..."
+amqmfsck -f /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}
+RC=$?
+echo "RC=${RC}"
+if [ ${RC} != 0 ]; then
+    echo "CheckFileSystem: File check failed for /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER} : RC=${RC} "
+    exit 1
+else
+    echo "CheckFileSystem: File check successful"
+fi

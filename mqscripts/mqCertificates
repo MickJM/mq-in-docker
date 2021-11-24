@@ -1,18 +1,19 @@
 #!/bin/bash
 #
-# Script to create the MQ keystore
+# Script to create the MQ keystores
 #
 set -e
 #
 echo "MQ Certificates"
-echo "---------------"
+echo $(date)
+echo "---------------------------"
 #
 ret=0
 #
 # Remove the old files
 #
 cleankeystore() {
-    echo "Removing old key store files ..."
+    echo "Certificates: Removing old key store files ..."
     local filename=${IBM_MQ_QUEUEMANAGER}
     rm -rf ${filename}.*
 }
@@ -34,19 +35,19 @@ createKeystore() {
     cleankeystore ${filename}
     ret=0
     if [[ ! -e ${filename}.kdb ]]; then
-        echo "Default keystore does not exist ... creating new MQ certificate keystore"
+        echo "Certificates: Default keystore does not exist ... creating new MQ certificate keystore"
         password=`date +%s | sha256sum | base64 | head -c 16 ; echo`
 #        echo "Certs: Password = ${password}"
         runmqakm -keydb -create -db ${filename}.kdb -pw ${password} -stash
         chmod 755 ${filename}.*
         RC=$?
         if [ ${RC} != 0 ]; then
-            echo "Certs: Keystore failed get created ... return code ${ret}"        
+            echo "Certificates: Keystore failed to get created ... return code ${ret}"        
         else
-            echo "Certs: Keystore successfully created ... return code ${ret}"
+            echo "Certificates: Keystore successfully created ... return code ${ret}"
         fi
     else
-        echo "Default keystore already exists"
+        echo "Certificates: Default keystore already exists"
         ret=1
     fi
 }
@@ -57,13 +58,13 @@ createKeystore() {
 #
 addPersonalCert() {
     local keystore=${IBM_MQ_QUEUEMANAGER}
-    echo "Certs: Add queue manager cert"
+    echo "Certificates: Add queue manager cert"
     local lowercaseQM=`echo "${IBM_MQ_QUEUEMANAGER}" | awk '{print tolower($0)}'`
 #    
-    echo "Certs: lower ${lowercaseQM}"
+    echo "Certificates: lower ${lowercaseQM}"
     local certLabel="ibmwebspheremq${lowercaseQM}" 
     runmqakm -cert -create -label ${certLabel} -stashed -expire 730 -size 2048 -dn "CN=${IBM_MQ_QUEUEMANAGER},OU=TEST,OU=QMGR,OU=ADMIN,O=DEVOPS,L=LONDON,ST=GB,email=user@domain.com" -db ${keystore}.kdb -ca false
-    echo "Certs: New certificate created"
+    echo "Certificates: New certificate created"
     runmqakm -cert -details -db ${keystore}.kdb -stashed -label ${certLabel}
 }
 #
@@ -80,30 +81,33 @@ extractCert() {
     runmqakm -cert -extract -db ${keystore}.kdb -stashed -label ${certLabel} -target ${certLabel}.arm -format ascii
     RC=$?
     if [ ${RC} != 0 ]; then
-        echo "Certs: Queue manager private cert was not exported"
+        echo "Certificates: Queue manager private cert was not exported"
     else
-        echo "Certs: Queue manager cert has been exported"
+        echo "Certificates: Queue manager cert has been exported"
     fi
 }
 #
 #. /opt/mqm/bin/setmqenv -s
 dspmqver
 #
-echo "Certs: Creating certificate keystore ..."
+echo "Certificates: Creating certificate keystore ..."
 exist=`queueManagerExists`
 if [[ ${exist} != "0" ]]; then
-    echo "Certs: Queue manager ${IBM_MQ_QUEUEMANAGER} does not exist"
+    echo "Certificates: Queue manager ${IBM_MQ_QUEUEMANAGER} does not exist"
 else
-    echo "Certs: Queue manager ${IBM_MQ_QUEUEMANAGER} exists ... creating keystore "
+    echo "Certificates: Queue manager ${IBM_MQ_QUEUEMANAGER} exists ... creating keystore "
+    folder=`pwd`
     cd /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/ssl
     createKeystore
     if [[ ${ret} != "1" ]]; then
-        echo "Certs: Add cert"
-        addPersonalCert key
+        echo "Certificates: Add cert"
+        addPersonalCert
     fi
+    #
     # Delete existing extract file for the queue managers certificate
     # Extract the certifcate
     #
     extractCert
+    cd ${folder}
 fi
 #

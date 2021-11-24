@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+set -e
+#
+. /opt/mqm/bin/setmqenv -s
+#
+echo "MQ Run Qmgr Metrics   "
+echo $(date)
+echo "---------------------------"
+#
+createConfig() {
+    if [ ! -d /home/mqm/config/ ]; then
+        mkdir /home/mqm/config
+    fi
+    if [ -f /home/mqm/config/application-localqm.yaml ]; then
+        rm /home/mqm/config/application-localqm.yaml
+    fi
+    local -r OUT=/home/mqm/config/application-localqm.yaml
+#
+    echo "logging:" > $OUT
+    echo "   level:" >> $OUT
+    echo "     org:" >> $OUT
+    echo "       springframework: OFF" >> $OUT
+    echo "     monitor:" >> $OUT
+    echo "       mq: INFO" >> $OUT
+    echo "spring:" >> $OUT
+    echo "   security:" >> $OUT
+    echo "     user:" >> $OUT
+    echo "       name: monitor" >> $OUT
+    echo "       password: monitor123" >> $OUT
+    echo "ibm:" >> $OUT
+    echo "  mq:" >> $OUT
+    echo "    multiinstance: false" >> $OUT
+    echo "    queueManager: ${QMGR}" >> $OUT
+    echo "    channel:" >> $OUT
+    echo "    connName:" >> $OUT
+    echo "    sslCipherSpec:" >> $OUT
+    echo "    useSSL: false" >> $OUT
+#    echo "    user: mqdocker" >> $OUT
+#    echo "    password: mqdockerpassw0rd" >> $OUT
+#    echo "    authenricateUsingCSP: true" >> $OUT
+    echo "    local: true" >> $OUT
+    echo "    keepMetricsWhenQueueManagerIsDown: false" >> $OUT
+    echo "    resources:" >> $OUT
+    echo "      cpu: true" >> $OUT
+    echo "      system: true" >> $OUT
+    echo "    clearMetrics: 5" >> $OUT
+    #echo "    ccdtFile1: " >> $OUT
+    #echo "    alerts1:" >> $OUT
+    #echo "      highqueuedepth:" >> $OUT
+    #echo "        action: MQIA_INHIBIT_PUT" >> $OUT
+    #echo "        value: percentage" >> $OUT
+    #echo "        queue: FRED:60, *:80" >> $OUT
+    echo "    json:" >> $OUT
+    echo "      sort: true" >> $OUT
+    echo "      order: ascending" >> $OUT
+    echo "    objects:" >> $OUT
+    echo "      epoch: 1" >> $OUT
+    echo "      queues:" >> $OUT
+    echo "        include: DEAD.LETTER.QUEUE, SYSTEM.ADMIN.COMMAND.QUEUE, SYSTEM.ADMIN.STATISTICS.QUEUE, SYSTEM.ADMIN.ACCOUNTING.QUEUE, \"*\"" >> $OUT
+    echo "        exclude: SYSTEM.,AMQ.,DUMMY,ERROR.HANDLER,KMQ." >> $OUT
+    echo "      channels:" >> $OUT
+    echo "        include: \"*\"" >> $OUT
+    echo "        exclude: SYSTEM." >> $OUT
+    echo "      listeners:" >> $OUT
+    echo "        include: \"*\"" >> $OUT
+    echo "        exclude: SYSTEM." >> $OUT
+    echo "        types:" >> $OUT
+    echo "          include: TCP" >> $OUT
+    echo "          exclude: \"*\"" >> $OUT
+    echo "    event:" >> $OUT
+    echo "      delayInMilliSeconds: 10000" >> $OUT
+    echo "    security:" >> $OUT
+    echo "      truststore: " >> $OUT
+    echo "      truststore-password: " >> $OUT
+    echo "      keystore: " >> $OUT
+    echo "      keystore-password: " >> $OUT
+    echo "management:" >> $OUT
+    echo "  endpoints:" >> $OUT
+    echo "    web:" >> $OUT
+    echo "      exposure:" >> $OUT
+    echo "        include: info, health, prometheus" >> $OUT      
+    echo "  endpoint:" >> $OUT
+    echo "    health:" >> $OUT
+    echo "      show-details: always" >> $OUT
+    echo "info:" >> $OUT
+    echo "  app:" >> $OUT
+    echo "    name: mq-metrics" >> $OUT
+    echo "    description: IBM MQ Metrics" >> $OUT
+    echo "    version: 1.0.0.18" >> $OUT
+    echo "    java:" >> $OUT
+    echo "      version: 1.8.0.0" >> $OUT
+    echo "server:" >> $OUT
+    echo "  port: 8081" >> $OUT
+}
+
+#/usr/bin/java -Djava.library.path=/opt/mqm/java/lib64 -jar /home/mqm/scripts/sourceFiles/mq-metrics-1.0.0.18.jar --spring.profiles.active=localqm --spring.config.location=/home/mqm/config/
+
+echo "mqQmgrMetrics: Processing metrics"
+#
+QMGR=$1
+#
+createConfig
+#
+. /opt/mqm/bin/setmqenv -m $QMGR -k 
+#cd /usr/local/mqmonitor/bin
+#exec /usr/bin/java -Djava.library.path=/opt/mqm/java/lib64 -jar ./home/mqm/scripts/sourceFiles/mq-metrics-1.0.0.18.jar \
+#     --spring.profile.location=/home/mqm/config/ --spring.profiles.active=local-qm
+exec /usr/bin/java -Djava.library.path=/opt/mqm/java/lib64 -jar /home/mqm/scripts/sourceFiles/mq-metrics-1.0.0.18.jar --spring.profiles.active=localqm --spring.config.location=/home/mqm/config/

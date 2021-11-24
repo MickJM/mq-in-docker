@@ -4,15 +4,17 @@ set -e
 #
 echo "-----------------------"
 echo "Driver: MQ Driver      "
-echo "Driver: Version 1.0.0.1"
+echo "Driver: Version 1.0.0.2"
+echo $(date)
 echo "-----------------------"
 pwd
 #
 # Is MQ Installed 
 #
-pwd
 cd /home/mqm/scripts/mqscripts
 . ./mqInstalled
+#su -c '/home/mqm/scripts/mqscripts/mqInstalled'
+#
 RC=$?
 if [ ${RC} != 0 ]; then
   echo "Driver: Error: IBM MQ doesn't seem to be installed correctly"
@@ -21,4 +23,5 @@ fi
 #
 # Monitor the running queue manager
 #
-. ./mqMonitor
+su -c '/home/mqm/scripts/mqscripts/mqMonitor' mqm
+#. ./mqMonitor

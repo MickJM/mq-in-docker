@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+set -e
+#
+. /opt/mqm/bin/setmqenv -s
+#
+echo "MQ Services "
+echo $(date)
+echo "---------------------------"
+#
+createMonitorService() {
+    if [ ! -d /home/mqm/config/ ]; then
+        mkdir /home/mqm/config
+    fi
+    if [ -f /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/service.mqsc ]; then
+        rm /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/service.mqsc
+    fi
+    local -r OUT=/home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/service.mqsc
+#
+    echo "* clean up" > $OUT
+    echo "STOP SERVICE(MQMONITOR)" >> $OUT
+    echo "DELETE SERVICE(MQMONITOR)" >> $OUT
+    echo "*" >> $OUT
+    echo "DEFINE SERVICE(MQMONITOR)        +" >> $OUT
+    echo "       CONTROL(QMGR)                +" >> $OUT
+    echo "       SERVTYPE(SERVER)             +" >> $OUT
+    echo "       STARTCMD('/home/mqm/scripts/mqscripts/mqRunQmgrMetrics') +" >> $OUT
+    echo "       STARTARG(+QMNAME+)           +" >> $OUT
+    echo "       STOPCMD('/usr/bin/kill ' )   +" >> $OUT
+    echo "       STOPARG(+MQ_SERVER_PID+)     +" >> $OUT
+    echo "       STDOUT('/var/mqm/errors/mqmonitor.out') +" >> $OUT
+    echo "       STDERR('/var/mqm/errors/mqmonitor.out') +" >> $OUT
+    echo "       descr('MQ Prometheus monitor')" >> $OUT
+    echo "*" >> $OUT
+    echo "START SERVICE(MQMONITOR)" >> $OUT
+
+}
+
+#/usr/bin/java -Djava.library.path=/opt/mqm/java/lib64 -jar /home/mqm/scripts/sourceFiles/mq-metrics-1.0.0.18.jar --spring.profiles.active=localqm --spring.config.location=/home/mqm/config/
+
+echo "mqSetupMonitorService: Creating service"
+#
+QMGR=$1
+#
+createMonitorService
+#
