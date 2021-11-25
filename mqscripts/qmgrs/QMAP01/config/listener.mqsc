@@ -1,0 +1,2 @@
+define listener(TCP.1414) trptype(TCP) control(QMGR) port(1414) descr('Default Listener') replace
+start listener(TCP.1414)

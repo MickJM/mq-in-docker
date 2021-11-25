@@ -75,73 +75,73 @@ createQueueManager()
 # If we have NOT selected 'COLD RESTART',  then create 
 #    a new queue manager if it doesn't exist
 #
-	if [ ${coldRestart} == "N" ]; then
-		if [ ${qmgrExists} -ne 0 ]; then
-			echo "Monitor: Info: Creating queue manager ${IBM_MQ_QUEUEMANAGER}"
-			echo "Monitor: Current disk space / mount points"
-			df -h
+##	if [ ${coldRestart} == "N" ]; then
+	if [ ${qmgrExists} -ne 0 ]; then
+		echo "Monitor: Info: Creating queue manager ${IBM_MQ_QUEUEMANAGER}"
+		echo "Monitor: Current disk space / mount points"
+		df -h
 #
-			echo "Monitor: Creating queue manager ..."
-			crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
+		echo "Monitor: Creating queue manager ..."
+		crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} ${IBM_MQ_QUEUEMANAGER}
 #
-			RC=$?
-			echo "RC=${RC}"
-			if [ ${RC} != 0 ]; then
-				echo "Monitor: Unable to create queue manager ${IBM_MQ_QUEUEMANAGER} "
-				exit
-			else
-				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} create susscessfully, RET=${RC}"
-			fi
+		RC=$?
+		echo "RC=${RC}"
+		if [ ${RC} != 0 ]; then
+			echo "Monitor: Unable to create queue manager ${IBM_MQ_QUEUEMANAGER} "
+			exit
+		else
+			echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} create susscessfully, RET=${RC}"
+		fi
 #
-            webadmin
+		webadmin
 #
-		    configPreRunningQueueManager
+		configPreRunningQueueManager
 #
 # Save a copy of the mqs.ini file, so we can reuse it in a cold restart
 #
-			cp /var/mqm/mqs.ini /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.in
+		cp /var/mqm/mqs.ini /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.in
 #
-			echo "Monitor: Starting queue manager"
-			strmqm ${IBM_MQ_QUEUEMANAGER}
-			RC=$?
-			echo "Monitor: START RC=${RC}"
-			if [ ${RC} != 0 ]; then
-				echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
-				exit
-			else
-				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
-			fi
-			echo "Monitor: Sleeping for 5 seconds"			
-			sleep 5
-#
-			configPostRunningQueueManager
-#
+		echo "Monitor: Starting queue manager"
+		strmqm ${IBM_MQ_QUEUEMANAGER}
+		RC=$?
+		echo "Monitor: START RC=${RC}"
+		if [ ${RC} != 0 ]; then
+			echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
+			exit
 		else
-		    echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} already exists, attempting to restart"
-#
-			echo "Monitor: Starting queue manager"
-			strmqm ${IBM_MQ_QUEUEMANAGER}
-			RC=$?
-			echo "Monitor: START RC=${RC}"
-			if [ ${RC} != 0 ]; then
-				echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
-				exit
-			else
-				echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
-			fi
-#
+			echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
 		fi
+		echo "Monitor: Sleeping for 5 seconds"			
+		sleep 5
+#
+		configPostRunningQueueManager
+#
 	else
+		echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} already exists, attempting to restart"
+#
+		echo "Monitor: Starting queue manager"
+		strmqm ${IBM_MQ_QUEUEMANAGER}
+		RC=$?
+		echo "Monitor: START RC=${RC}"
+		if [ ${RC} != 0 ]; then
+			echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
+			exit
+		else
+			echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
+		fi
+#
+	fi
+##	else
 #
 # https://webspheremqadministrator.blogspot.com/2014/06/how-to-do-cold-restart-of-queue-manager.html
 #
 # Cold restart
 #
-		echo "Monitor: Cold ReStart"
-		echo "Monitor: Removing old log files for ... ${IBM_MQ_QUEUEMANAGER} in /var/mqm/logs"
-		cd /var/mqm/log/${IBM_MQ_QUEUEMANAGER}/
-		rm -r *
-		ls -lrt 
+##		echo "Monitor: Cold ReStart"
+##		echo "Monitor: Removing old log files for ... ${IBM_MQ_QUEUEMANAGER} in /var/mqm/logs"
+##		cd /var/mqm/log/${IBM_MQ_QUEUEMANAGER}/
+##		rm -r *
+##		ls -lrt 
 #
 # First create a new 'dummy' queue manager, based on the details in the environment variables
 #    We dont start the queue manager yet, once created, copy the new log files to the queue manager folder
@@ -152,40 +152,40 @@ createQueueManager()
 #        Messages stored on log files will be lost
 #    if every thing works, the queue manager should start sucessfully
 #
-		echo "Monitor: Creating dummy queue manager ... COLD${IBM_MQ_QUEUEMANAGER}"
-		crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} COLD${IBM_MQ_QUEUEMANAGER}
-		RC=$?
-		if [ ${RC} != 5 ]; then
-			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} created successfully"
-		else
-			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} failed to be created, error code $?"
-			exit
-		fi
+##		echo "Monitor: Creating dummy queue manager ... COLD${IBM_MQ_QUEUEMANAGER}"
+##		crtmqm -u DEAD.LETTER.QUEUE -lc -lp ${IBM_MQ_PRIMARYLOGFILES} -ls ${IBM_MQ_SECONDARYLOGFILES} COLD${IBM_MQ_QUEUEMANAGER}
+##		RC=$?
+##		if [ ${RC} != 5 ]; then
+##			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} created successfully"
+##		else
+##			echo "Monitor: COLD queue manager ${IBM_MQ_QUEUEMANAGER} failed to be created, error code $?"
+##			exit
+##		fi
 #
-		echo "***********************************"
-		echo "Monitor: Copying new config file from COLD${IBM_MQ_QUEUEMANAGER} to ${IBM_MQ_QUEUEMANAGER}"
-		mv /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/* /var/mqm/log/${IBM_MQ_QUEUEMANAGER} 
-		ls -lrt /var/mqm/log/${IBM_MQ_QUEUEMANAGER}
-		echo "Monitor: Copying mqs.ini"
-		cp /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.ini /var/mqm/mqs.ini
-		echo "***********************************"
+##		echo "***********************************"
+##		echo "Monitor: Copying new config file from COLD${IBM_MQ_QUEUEMANAGER} to ${IBM_MQ_QUEUEMANAGER}"
+##		mv /var/mqm/log/COLD${IBM_MQ_QUEUEMANAGER}/* /var/mqm/log/${IBM_MQ_QUEUEMANAGER} 
+##		ls -lrt /var/mqm/log/${IBM_MQ_QUEUEMANAGER}
+##		echo "Monitor: Copying mqs.ini"
+##		cp /var/mqm/qmgrs/${IBM_MQ_QUEUEMANAGER}/copy_mqs.ini /var/mqm/mqs.ini
+##		echo "***********************************"
 #
 # Remove the 'dummy' queue manager
 #
-		dltmqm COLD${IBM_MQ_QUEUEMANAGER}
+##		dltmqm COLD${IBM_MQ_QUEUEMANAGER}
 #
-		echo "Monitor: Starting queue manager ${IBM_MQ_QUEUEMANAGER} after cold-restart"
-		strmqm ${IBM_MQ_QUEUEMANAGER}
-		RC=$?
-		echo "Monitor: START RC=${RC}"
-		if [ ${RC} != 0 ]; then
-			echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
-			exit
-		else
-			echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
-		fi
+##		echo "Monitor: Starting queue manager ${IBM_MQ_QUEUEMANAGER} after cold-restart"
+##		strmqm ${IBM_MQ_QUEUEMANAGER}
+##		RC=$?
+##		echo "Monitor: START RC=${RC}"
+##		if [ ${RC} != 0 ]; then
+##			echo "Monitor: Unable to start queue manager ${IBM_MQ_QUEUEMANAGER} "
+##			exit
+##		else
+##			echo "Monitor: Queue manager ${IBM_MQ_QUEUEMANAGER} started successfully, RET=${RC}"
+##		fi
 
-	fi
+##	fi
 #
 	set +e
 #	echo "Monitor: Starting queue manager ${IBM_MQ_QUEUEMANAGER}"
@@ -202,20 +202,16 @@ createQueueManager()
 	strmqweb
 	dspmqweb
 #
-#	postConfigurations
+#	Check the running status of mq-metrics
 #
     ps -ef | grep mq-metrics | grep -v grep
 	monitorRunning=`ps -ef | grep mq-metrics | grep -v grep | wc -l`
 	if [ ${monitorRunning} != 0 ]; then
-		echo "start service(MQMONITOR)" | runmqsc ${IBM_MQ_QUEUEMANAGER}
-	fi
-	RC=$?
-	if [ ${RC} != 0 ]; then
-		echo "Monitor: MQMONITOR service did not start: ${RC}"
-	else
 		echo "Monitor: MQMONITOR service started successfully : ${RC}"
+	else 
+		echo "Monitor: MQMONITOR service did not start: ${RC}"
 	fi
-
+#
 	set -e
 }
 #
@@ -234,15 +230,12 @@ configPreRunningQueueManager()
 #
 configPostRunningQueueManager()
 {
-
 	echo "Monitor: Setup monitor service in .mqsc files"
 	. ./mqSetupMonitorService ${IBM_MQ_QUEUEMANAGER}
-
+#	
 	echo "Monitor: Applying configuration to queue manager using .mqsc files"
-	. ./mqSetupQueueManager
+	. ./mqSetupQueueManager ${IBM_MQ_QUEUEMANAGER}
 #
-#    echo "Monitor: Starting monitoring API"
-#	. ./mqRunQmgrMetrics ${IBM_MQ_QUEUEMANAGER}
 }
 #
 #

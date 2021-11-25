@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+set +e
+#
+echo "Setup QueueManager"
+echo $(date)
+echo "---------------------------"
+#
+DIR=`pwd`
+LOGFILE=/tmp/mqSetupQueueManager_$(date +%Y%m%d_%H%M%S_%N)
+#
+# Create the initial setup dynamically ...
+#
+createDLQ()
+{
+   if [ ! -d /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/ ]; then
+      mkdir /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config
+   fi
+   if [ -f /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/initialsetup.mqsc ]; then
+      rm /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/initialsetup.mqsc
+   fi
+   echo "SetupQueueManager: Creating default listener : TCP.${IBM_MQ_LISTENER}"
+   echo "define ql(DEAD.LETTER.QUEUE) LIKE (SYSTEM.DEAD.LETTER.QUEUE)" >> ${IBM_MQ_CONFIG_LOCATION}/deadletterqueue.mqsc
+}
+#
+createListener()
+{
+   if [ ! -d /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/ ]; then
+      mkdir /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config
+   fi
+   if [ -f /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/listener.mqsc ]; then
+      rm /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/listener.mqsc
+   fi
+   echo "SetupQueueManager: Creating default listener : TCP.${IBM_MQ_LISTENER}"
+   echo "define listener(TCP.${IBM_MQ_LISTENER}) trptype(TCP) control(QMGR) port(${IBM_MQ_LISTENER}) descr('Default Listener') replace" >> ${IBM_MQ_CONFIG_LOCATION}/listener.mqsc
+   echo "start listener(TCP.${IBM_MQ_LISTENER})" >> ${IBM_MQ_CONFIG_LOCATION}/listener.mqsc
+}
+
+#
+# Apply configurations
+#
+applyconfig()
+{
+   touch ${LOGFILE}
+#   
+   for MQSC_FILE in $(ls -v ${IBM_MQ_CONFIG_LOCATION}/*.mqsc); do
+      echo "SetupQueueManager: mqsc file name - ${MQSC_FILE}"
+      runmqsc ${IBM_MQ_QUEUEMANAGER} < ${MQSC_FILE} >> ${LOGFILE}
+   done
+}
+#
+#
+if [ -z ${IBM_MQ_CONFIG_LOCATION} ]; then
+   echo "SetupQueueManager: IBM_MQ_CONFIG_LOCATION is not set, using default file location"
+   export IBM_MQ_CONFIG_LOCATION=${DIR}/qmgrs/${IBM_MQ_QUEUEMANAGER}/config
+fi
+echo "SetupQueueManager: Location for config files is: ${IBM_MQ_CONFIG_LOCATION}"
+#
+if [ -z ${IBM_MQ_LISTENER} ]; then
+   echo "SetupQueueManager: IBM_MQ_LISTENER variable is not set, using default value"
+   export IBM_MQ_LISTENER=1414
+fi
+#
+QMGR=$1
+#
+createDLQ
+createListener
+#
+applyconfig
+#

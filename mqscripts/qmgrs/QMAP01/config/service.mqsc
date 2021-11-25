@@ -1,0 +1,16 @@
+* clean up
+STOP SERVICE(MQMONITOR)
+DELETE SERVICE(MQMONITOR)
+*
+DEFINE SERVICE(MQMONITOR)        +
+       CONTROL(QMGR)                +
+       SERVTYPE(SERVER)             +
+       STARTCMD('/home/mqm/scripts/mqscripts/mqRunQmgrMetrics') +
+       STARTARG(+QMNAME+)           +
+       STOPCMD('/usr/bin/kill ' )   +
+       STOPARG(+MQ_SERVER_PID+)     +
+       STDOUT('/var/mqm/errors/mqmonitor.out') +
+       STDERR('/var/mqm/errors/mqmonitor.out') +
+       descr('MQ Prometheus monitor')
+*
+START SERVICE(MQMONITOR)

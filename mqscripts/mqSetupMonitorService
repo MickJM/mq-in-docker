@@ -9,8 +9,8 @@ echo $(date)
 echo "---------------------------"
 #
 createMonitorService() {
-    if [ ! -d /home/mqm/config/ ]; then
-        mkdir /home/mqm/config
+    if [ ! -d /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/ ]; then
+        mkdir /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config
     fi
     if [ -f /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/service.mqsc ]; then
         rm /home/mqm/scripts/mqscripts/qmgrs/${QMGR}/config/service.mqsc
