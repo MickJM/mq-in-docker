@@ -23,5 +23,5 @@ fi
 #
 # Monitor the running queue manager
 #
-su -c '/home/mqm/scripts/mqscripts/mqMonitor' mqm
+#su -c '/home/mqm/scripts/mqscripts/mqMonitor' mqm
 #. ./mqMonitor

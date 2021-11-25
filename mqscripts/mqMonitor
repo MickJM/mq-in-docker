@@ -69,6 +69,7 @@ createQueueManager()
 	else
 	    coldRestart="N"
 	fi
+	coldRestart="N"
 	echo "Monitor: coldRestart is : ${coldRestart}"
 #
 # If we have NOT selected 'COLD RESTART',  then create 

@@ -1,8 +1,8 @@
 ::
 ::
-docker volume rm mqdata-qmap01-log
-docker volume create mqdata-qmap01-log
-
+::docker volume rm mqdata-qmap01-log
+::docker volume create mqdata-qmap01-log
+::
 docker stop qm-qmap01a
 docker rm qm-qmap01a
 ::
@@ -13,8 +13,8 @@ docker network create --subnet=172.21.0.0/16 mq-qmap01
 ::docker network create --subnet=172.22.0.0/16 mq-qmap02
 ::::
 ::
-docker volume rm qmap01-qmgr
-docker volume create qmap01-qmgr
+docker volume rm mqdata-qmap01-qmgr
+docker volume create mqdata-qmap01-qmgr
 ::
 ::docker volume rm qmap01-log
 ::docker volume create qmap01-log
@@ -30,11 +30,12 @@ docker volume create qmap01-qmgr
 ::
 ::       -e MULTI=N ^
 ::       -e INST=0 ^
+::docker run -it --mount "type=bind,source=c:\Users\mickm\OneDrive\Documents\Development\Docker\mq-in-docker,destination=/home/mqm/scripts" --name=test mqqm:01 /bin/sh
 ::
 docker run -h qm-qmap01a --network=mq-qmap01 ^
        -d --ulimit nofile=10240:10240 ^
        --mount "type=bind,source=c:\Users\mickm\OneDrive\Documents\Development\Docker\mq-in-docker,destination=/home/mqm/scripts" ^
-       --mount "type=volume,source=qmap01-qmgr,destination=/var/mqm" ^
+       --mount "type=volume,source=mqdata-qmap01-qmgr,destination=/var/mqm" ^
        -e IBM_MQ_QUEUEMANAGER=QMAP01 -e IBM_MQ_LISTENER=1414 -e IBM_MQ_PER_CERT_EXPIRY=730 -e IBM_MQ_PER_CERT_SIZE=2048 ^
        -e COLD_QMGR=N ^
        -p 1461:1414 ^
